@@ -49,7 +49,7 @@ kotlin {
         }
         val jvmMain by getting {
             dependencies {
-                implementation("com.github.jmdns:jmdns:0e40954468")
+                implementation("org.jmdns:jmdns:3.6.3")
                 implementation("io.ktor:ktor-server-core:2.3.9")
                 implementation("io.ktor:ktor-server-netty:2.3.9")
                 implementation("io.ktor:ktor-server-default-headers:2.3.9")
