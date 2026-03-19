@@ -29,7 +29,7 @@ abstract class IOSCQueryServer(
         )
     }
 
-    var oscServiceHandle: ServiceHandle? = null
+    protected var oscServiceHandle: ServiceHandle? = null
 
     fun processPath(path: String): String {
         return format.encodeToString(rootNode.getNodeWithPath(path))
@@ -40,13 +40,22 @@ abstract class IOSCQueryServer(
     fun init() {
         initHttp(oscQueryPort, "0.0.0.0")
 
-        // Announce OSCQuery and OSC service
+        // Register services — these will be queued until setPublishAddress is called
         service.createService("_oscjson._tcp.local.", name, oscQueryPort, "")
         oscServiceHandle = createOscService()
     }
 
     fun createOscService() : ServiceHandle {
         return service.createService("_osc._${transport.name.lowercase()}.local.", name, oscPort, "")
+    }
+
+    /**
+     * Sets the address to publish mDNS services on.
+     * Creates (or recreates) the publish JmDNS instance bound to the given address.
+     * Any previously queued or registered services will be (re)published on this address.
+     */
+    fun setPublishAddress(address: IpAddress) {
+        service.setPublishAddress(address)
     }
 
     abstract fun updateOscService(port: UShort)

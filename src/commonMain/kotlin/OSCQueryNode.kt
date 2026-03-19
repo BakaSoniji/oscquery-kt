@@ -18,7 +18,10 @@ val module = SerializersModule {
 //    }
 }
 
-val format = Json { serializersModule = module }
+val format = Json {
+    serializersModule = module
+    ignoreUnknownKeys = true
+}
 
 @Serializable
 class OSCQueryRootNode : OSCQueryNode("/", null, mutableMapOf()) {
