@@ -1,5 +1,6 @@
 package dev.slimevr.oscquery
 
+import kotlinx.coroutines.channels.Channel
 import java.net.InetAddress
 import java.util.concurrent.atomic.AtomicLong
 import javax.jmdns.JmDNS
@@ -9,8 +10,9 @@ import javax.jmdns.ServiceInfo as JmDNSServiceInfo
 
 actual class OSCQueryService actual constructor(private val name: String) : AutoCloseable {
 
-    // Browse instance: bound to wildcard (null) so it receives multicast from all interfaces
-    private val browseJmDNS: JmDNS = JmDNS.create(null, name)
+    // Browse instances: one per interface for receiving multicast on all networks.
+    // Initialized with a single wildcard instance, replaced when setBrowseAddresses is called.
+    private var browseInstances: List<JmDNS> = listOf(JmDNS.create(null, name))
 
     // Publish instance: created lazily when setPublishAddress is called, bound to a specific interface
     private var publishJmDNS: JmDNS? = null
@@ -59,6 +61,26 @@ actual class OSCQueryService actual constructor(private val name: String) : Auto
         }
     }
 
+    /**
+     * Sets the addresses to browse for mDNS services on.
+     * Creates one JmDNS instance per address. On Windows, each instance binds
+     * multicast to its specific address, so multiple instances are needed
+     * to discover services across different network interfaces.
+     *
+     * Must be called before addServiceListener for the listeners to be
+     * registered on the new instances.
+     */
+    actual fun setBrowseAddresses(addresses: List<InetAddress>) {
+        // Close existing browse instances
+        for (instance in browseInstances) {
+            instance.close()
+        }
+
+        browseInstances = addresses.map { addr ->
+            JmDNS.create(addr, name)
+        }
+    }
+
     private val listenerCounter = AtomicLong(0)
     private val serviceListeners = mutableMapOf<Long, Pair<String, ServiceListener>>()
 
@@ -68,23 +90,39 @@ actual class OSCQueryService actual constructor(private val name: String) : Auto
         onServiceAdded: (ServiceInfo) -> Unit,
         onServiceRemoved: (type: String, name: String) -> Unit,
     ): ServiceListenerHandle {
+        // Track seen services to deduplicate across browse instances
+        val seenServices = mutableSetOf<String>()
+
         val listener = object : ServiceListener {
             override fun serviceAdded(event: ServiceEvent?) {
-                val info = browseJmDNS.getServiceInfo(event?.type ?: return, event.name)
-                if (info != null) {
-                    onServiceAdded(ServiceInfo(info))
+                val evt = event ?: return
+                val dns = evt.dns
+                val info = dns.getServiceInfo(evt.type, evt.name) ?: return
+                val key = "${info.name}:${info.port}"
+                synchronized(seenServices) {
+                    if (!seenServices.add(key)) return
                 }
+                onServiceAdded(ServiceInfo(info))
             }
 
             override fun serviceRemoved(event: ServiceEvent?) {
-                onServiceRemoved(event?.type ?: return, event.name)
+                val evt = event ?: return
+                synchronized(seenServices) {
+                    // Remove so re-discovery works
+                    seenServices.removeIf { it.startsWith("${evt.name}:") }
+                }
+                onServiceRemoved(evt.type, evt.name)
             }
 
             override fun serviceResolved(event: ServiceEvent?) {
                 onServiceResolved(ServiceInfo(event?.info ?: return))
             }
         }
-        browseJmDNS.addServiceListener(serviceName, listener)
+
+        // Register listener on all browse instances
+        for (instance in browseInstances) {
+            instance.addServiceListener(serviceName, listener)
+        }
 
         val handle = listenerCounter.getAndIncrement()
         serviceListeners[handle] = serviceName to listener
@@ -93,13 +131,17 @@ actual class OSCQueryService actual constructor(private val name: String) : Auto
 
     actual fun removeServiceListener(handle: ServiceListenerHandle): Boolean {
         val (serviceName, listener) = serviceListeners.remove(handle.id) ?: return false
-        browseJmDNS.removeServiceListener(serviceName, listener)
+        for (instance in browseInstances) {
+            instance.removeServiceListener(serviceName, listener)
+        }
         return true
     }
 
     override fun close() {
         publishJmDNS?.close()
-        browseJmDNS.close()
+        for (instance in browseInstances) {
+            instance.close()
+        }
     }
 }
 

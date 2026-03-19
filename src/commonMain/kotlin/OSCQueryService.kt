@@ -7,6 +7,8 @@ expect class OSCQueryService(name: String) : AutoCloseable {
 
     fun setPublishAddress(address: IpAddress)
 
+    fun setBrowseAddresses(addresses: List<IpAddress>)
+
     fun addServiceListener(
         serviceName: String,
         onServiceResolved: (ServiceInfo) -> Unit = {},

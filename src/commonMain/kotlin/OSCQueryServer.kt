@@ -25,7 +25,7 @@ abstract class IOSCQueryServer(
             oscTransport = transport,
             websocketIp = null,
             websocketPort = null,
-            extensions = mapOf(Extension.VALUE to true)
+            extensions = mapOf(Extension.VALUE.name to true)
         )
     }
 
@@ -56,6 +56,14 @@ abstract class IOSCQueryServer(
      */
     fun setPublishAddress(address: IpAddress) {
         service.setPublishAddress(address)
+    }
+
+    /**
+     * Sets the addresses to browse for mDNS services on.
+     * Must be called before adding service listeners.
+     */
+    fun setBrowseAddresses(addresses: List<IpAddress>) {
+        service.setBrowseAddresses(addresses)
     }
 
     abstract fun updateOscService(port: UShort)
