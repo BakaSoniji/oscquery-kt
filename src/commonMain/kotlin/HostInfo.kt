@@ -132,7 +132,7 @@ data class HostInfo(
     @SerialName("OSC_IP") val oscIp: String?,
     @SerialName("OSC_PORT") val oscPort: UShort?,
     @SerialName("OSC_TRANSPORT") val oscTransport: OscTransport?,
-    @SerialName("WS_IP") val websocketIp: String?,
-    @SerialName("WS_PORT") val websocketPort: UShort?,
+    @SerialName("WS_IP") val websocketIp: String? = null,
+    @SerialName("WS_PORT") val websocketPort: UShort? = null,
     @SerialName("EXTENSIONS") val extensions: Map<String, Boolean> = emptyMap()
 )
