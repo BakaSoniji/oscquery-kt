@@ -17,7 +17,7 @@ abstract class IOSCQueryServer(
 
     var hostInfo = buildHostInfo()
 
-    fun buildHostInfo (): HostInfo {
+    fun buildHostInfo(): HostInfo {
         return HostInfo(
             name = name,
             oscIp = address,

@@ -128,10 +128,10 @@ enum class Extension {
 
 @Serializable
 data class HostInfo(
-    @SerialName("NAME") val name: String?,
-    @SerialName("OSC_IP") val oscIp: String?,
-    @SerialName("OSC_PORT") val oscPort: UShort?,
-    @SerialName("OSC_TRANSPORT") val oscTransport: OscTransport?,
+    @SerialName("NAME") val name: String? = null,
+    @SerialName("OSC_IP") val oscIp: String? = null,
+    @SerialName("OSC_PORT") val oscPort: UShort? = null,
+    @SerialName("OSC_TRANSPORT") val oscTransport: OscTransport? = null,
     @SerialName("WS_IP") val websocketIp: String? = null,
     @SerialName("WS_PORT") val websocketPort: UShort? = null,
     @SerialName("EXTENSIONS") val extensions: Map<String, Boolean> = emptyMap()
